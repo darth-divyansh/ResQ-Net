@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapbox Route from Current Location</title>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.js"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body, html { margin: 0; height: 100%; }
+        #map { width: 100%; height: 100vh; }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<script>
+    mapboxgl.accessToken = 'pk.eyJ1IjoiZGl2eWFuc2hiYW5zYWwxMCIsImEiOiJjbTZ0ZnN3NWswMjgzMmlzYzh3YjdtOTYyIn0.RWLfD3wChzRnlU95Sfhw9g';
+    let map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/streets-v11',
+        center: [77.1025, 28.7041], // Default: New Delhi
+        zoom: 12
+    });
+
+    let userLocation;
+    let destinationMarker;
+    let routeLayerId = "route-layer";
+
+    // Get user's current location
+    navigator.geolocation.getCurrentPosition(position => {
+        userLocation = [position.coords.longitude, position.coords.latitude];
+        map.setCenter(userLocation);
+
+        new mapboxgl.Marker({ color: "blue" }) // User location marker
+            .setLngLat(userLocation)
+            .addTo(map);
+    });
+
+    // Function to draw route on the map
+    function getRoute(destination) {
+        if (!userLocation) {
+            alert("Current location not available.");
+            return;
+        }
+
+        const directionsUrl = `https://api.mapbox.com/directions/v5/mapbox/driving/${userLocation[0]},${userLocation[1]};${destination[0]},${destination[1]}?geometries=geojson&access_token=${mapboxgl.accessToken}`;
+
+        axios.get(directionsUrl)
+            .then(response => {
+                const route = response.data.routes[0].geometry;
+
+                // Remove existing route if present
+                if (map.getLayer(routeLayerId)) {
+                    map.removeLayer(routeLayerId);
+                    map.removeSource(routeLayerId);
+                }
+
+                // Add new route
+                map.addSource(routeLayerId, {
+                    type: "geojson",
+                    data: {
+                        type: "Feature",
+                        geometry: route
+                    }
+                });
+
+                map.addLayer({
+                    id: routeLayerId,
+                    type: "line",
+                    source: routeLayerId,
+                    layout: { "line-join": "round", "line-cap": "round" },
+                    paint: { "line-color": "#FF0000", "line-width": 5 }
+                });
+            })
+            .catch(error => console.error("Error fetching route:", error));
+    }
+
+    // Click event to select destination
+    map.on("click", (event) => {
+        const destination = [event.lngLat.lng, event.lngLat.lat];
+
+        // Remove previous marker
+        if (destinationMarker) {
+            destinationMarker.remove();
+        }
+
+        // Add new marker at clicked location
+        destinationMarker = new mapboxgl.Marker({ color: "red" })
+            .setLngLat(destination)
+            .addTo(map);
+
+        getRoute(destination); // Fetch and display route
+    });
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nearby Hospitals</title>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.9.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.9.0/mapbox-gl.js"></script>
+    <style>
+        #map { height: 500px; width: 100%; }
+    </style>
+</head>
+<body>
+    <h2>Nearby Hospitals</h2>
+    <div id="map"></div>
+    <script>
+        // Your Mapbox access token
+
+        
+        mapboxgl.accessToken = 'pk.eyJ1IjoiZGl2eWFuc2hiYW5zYWwxMCIsImEiOiJjbTZ0ZnN3NWswMjgzMmlzYzh3YjdtOTYyIn0.RWLfD3wChzRnlU95Sfhw9g';
+
+
+
+        // Initialize the map
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v11',
+            center: [78, 20], // Default center (India)
+            zoom: 5
+        });
+
+        // Add geolocate control to the map
+        const geolocate = new mapboxgl.GeolocateControl({
+            positionOptions: {
+                enableHighAccuracy: true
+            },
+            trackUserLocation: true
+        });
+
+        map.addControl(geolocate);
+
+        // Handle geolocation event
+        geolocate.on('geolocate', async (e) => {
+            const { latitude, longitude } = e.coords;
+            console.log("User's location:", latitude, longitude);
+
+            // Set the map center to user's location and zoom in
+            map.setCenter([longitude, latitude]);
+            map.zoomTo(14);  // Adjust zoom level as needed
+
+            // Add a marker for the user's location
+            new mapboxgl.Marker({ color: 'blue' })
+                .setLngLat([longitude, latitude])
+                .setPopup(new mapboxgl.Popup().setText("Your Location"))
+                .addTo(map);
+
+            // Fetch the nearest hospital using Mapbox Search API (geocoding)
+            let response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/hospital.json?proximity=${longitude},${latitude}&access_token=${mapboxgl.accessToken}`);
+            let data = await response.json();
+
+            if (data.features && data.features.length > 0) {
+                const nearestHospital = data.features[0];
+                const { center, text } = nearestHospital;
+
+                const [hospitalLon, hospitalLat] = center;
+                console.log("Nearest hospital:", text, hospitalLat, hospitalLon);
+
+                // Add a marker for the nearest hospital
+                new mapboxgl.Marker({ color: 'red' })
+                    .setLngLat([hospitalLon, hospitalLat])
+                    .setPopup(new mapboxgl.Popup().setText(text))
+                    .addTo(map);
+
+                // Request the route from user location to nearest hospital using Mapbox Directions API
+                const routeResponse = await fetch(
+                    `https://api.mapbox.com/directions/v5/mapbox/driving/${longitude},${latitude};${hospitalLon},${hospitalLat}?geometries=geojson&access_token=${mapboxgl.accessToken}`
+                );
+
+                const routeData = await routeResponse.json();
+
+                // Check if route data is returned and draw the route
+                if (routeData.routes && routeData.routes.length > 0) {
+                    const route = routeData.routes[0].geometry;
+                    map.addSource('route', {
+                        type: 'geojson',
+                        data: {
+                            type: 'Feature',
+                            geometry: route
+                        }
+                    });
+
+                    map.addLayer({
+                        id: 'route',
+                        type: 'line',
+                        source: 'route',
+                        layout: {
+                            'line-join': 'round',
+                            'line-cap': 'round'
+                        },
+                        paint: {
+                            'line-color': '#FF5733',
+                            'line-width': 8
+                        }
+                    });
+                }
+            } else {
+                console.log("No hospitals found nearby");
+            }
+        });
+
+        // Trigger the geolocation manually for the first time
+        geolocate.trigger();
+    </script>
+</body>
+</html>

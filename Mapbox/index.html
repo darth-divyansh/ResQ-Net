@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nearby Hospitals</title>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.9.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.9.0/mapbox-gl.js"></script>
+    <style>
+        #map { height: 500px; width: 100%; }
+    </style>
+</head>
+<body>
+    <h2>Nearby Hospitals</h2>
+    <div id="map"></div>
+    <script>
+        // Your Mapbox access token
+        mapboxgl.accessToken = 'pk.eyJ1IjoiZGl2eWFuc2hiYW5zYWwxMCIsImEiOiJjbTZ0ZnN3NWswMjgzMmlzYzh3YjdtOTYyIn0.RWLfD3wChzRnlU95Sfhw9g';
+
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v11',
+            center: [78, 20], // Default view (India)
+            zoom: 5
+        });
+
+        // Add geolocate control to the map
+        const geolocate = new mapboxgl.GeolocateControl({
+            positionOptions: {
+                enableHighAccuracy: true
+            },
+            trackUserLocation: true
+        });
+
+        map.addControl(geolocate);
+        geolocate.on('geolocate', async (e) => {
+            const { latitude, longitude } = e.coords;
+            map.setCenter([longitude, latitude]);
+            map.zoomTo(14);
+
+            // Add a marker for the user's location
+            new mapboxgl.Marker({ color: 'blue' })
+                .setLngLat([longitude, latitude])
+                .setPopup(new mapboxgl.Popup().setText("Your Location"))
+                .addTo(map);
+
+            // Fetch the nearest hospital and display the route
+            let response = await fetch(`http://localhost:5000/log-location`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ latitude, longitude })
+            });
+
+            let data = await response.json();
+            if (data.nearestHospital) {
+                const { lat, lon, display_name } = data.nearestHospital;
+
+                // Add a marker for the nearest hospital
+                new mapboxgl.Marker({ color: 'red' })
+                    .setLngLat([lon, lat])
+                    .setPopup(new mapboxgl.Popup().setText(display_name))
+                    .addTo(map);
+
+                // Request route from user location to nearest hospital
+                const routeResponse = await fetch(
+                    `https://api.mapbox.com/directions/v5/mapbox/driving/${longitude},${latitude};${lon},${lat}?geometries=geojson&access_token=${mapboxgl.accessToken}`
+                );
+                const routeData = await routeResponse.json();
+
+                // Draw the route on the map
+                if (routeData.routes && routeData.routes.length > 0) {
+                    const route = routeData.routes[0].geometry;
+                    map.addSource('route', {
+                        type: 'geojson',
+                        data: {
+                            type: 'Feature',
+                            geometry: route
+                        }
+                    });
+
+                    map.addLayer({
+                        id: 'route',
+                        type: 'line',
+                        source: 'route',
+                        layout: {
+                            'line-join': 'round',
+                            'line-cap': 'round'
+                        },
+                        paint: {
+                            'line-color': '#FF5733',
+                            'line-width': 8
+                        }
+                    });
+                }
+            }
+        });
+
+        geolocate.trigger();
+    </script>
+</body>
+</html>
