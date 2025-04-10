@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Admin Panel - Add Marker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Mapbox GL JS CSS -->
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+  <style>
+    body { margin: 0; padding: 0; }
+    #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+    #form-container {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: #fff;
+      padding: 15px;
+      border-radius: 5px;
+      z-index: 1;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      max-width: 200px;
+    }
+    #form-container input, #form-container button {
+      margin: 5px 0;
+      width: 100%;
+      padding: 5px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div id="form-container">
+    <h3>Add Marker</h3>
+    <form id="markerForm">
+      <input type="text" id="name" placeholder="Place Name" required /><br>
+      <input type="text" id="lng" placeholder="Longitude" readonly required /><br>
+      <input type="text" id="lat" placeholder="Latitude" readonly required /><br>
+      <button type="submit">Add Marker</button>
+    </form>
+    <p style="font-size:12px;">Click on the map to choose a location.</p>
+  </div>
+  <div id="map"></div>
+
+  <!-- Mapbox GL JS -->
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+  <script>
+    mapboxgl.accessToken = 'pk.eyJ1IjoiZGl2eWFuc2hiYW5zYWwxMCIsImEiOiJjbTZ0ZnN3NWswMjgzMmlzYzh3YjdtOTYyIn0.RWLfD3wChzRnlU95Sfhw9g';
+
+    // Get user's current location
+    navigator.geolocation.getCurrentPosition(function(position) {
+      const userLng = position.coords.longitude;
+      const userLat = position.coords.latitude;
+
+      const map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/streets-v11',
+        center: [userLng, userLat], // Set map center to user's location
+        zoom: 12
+      });
+
+      // Add a marker for the user's location
+      new mapboxgl.Marker({ color: 'blue' }) // Blue marker for the user's location
+        .setLngLat([userLng, userLat])
+        .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(`<h3>Your Location</h3>`))
+        .addTo(map);
+
+      map.on('click', function(e) {
+        const lng = e.lngLat.lng.toFixed(5);
+        const lat = e.lngLat.lat.toFixed(5);
+        document.getElementById('lng').value = lng;
+        document.getElementById('lat').value = lat;
+      });
+
+      document.getElementById('markerForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const name = document.getElementById('name').value.trim();
+        const lng = parseFloat(document.getElementById('lng').value);
+        const lat = parseFloat(document.getElementById('lat').value);
+
+        if (!name || isNaN(lng) || isNaN(lat)) {
+          alert('Please click on the map and enter a valid place name.');
+          return;
+        }
+
+        // Send the new marker to the server (POST request)
+        // fetch('/api/markers', {
+        fetch('http://127.0.0.1:3000/api/markers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, lng, lat })
+        })
+        .then(response => response.json())
+        .then(data => {
+          alert('Marker added successfully!');
+          document.getElementById('markerForm').reset();
+
+          // After adding, add a new marker with an orange color and the name as the popup
+          new mapboxgl.Marker({ color: 'orange' })
+            .setLngLat([lng, lat])
+            .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(`<h3>${name}</h3>`))
+            .addTo(map);
+        })
+        .catch(err => {
+          console.error('Error adding marker:', err);
+          alert('There was an error adding the marker.');
+        });
+      });
+    }, function(error) {
+      console.error("Geolocation error:", error);
+      alert("Could not fetch your location. Please ensure location services are enabled.");
+      const defaultLngLat = [-74.006, 40.7128]; // Default to New York if geolocation fails
+      const map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/streets-v11',
+        center: defaultLngLat,
+        zoom: 12
+      });
+
+      // Add a marker for New York (default location)
+      new mapboxgl.Marker({ color: 'blue' }) // Blue marker for the default location
+        .setLngLat(defaultLngLat)
+        .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(`<h3>Your Location (Default)</h3>`))
+        .addTo(map);
+    });
+  </script>
+</body>
+</html>

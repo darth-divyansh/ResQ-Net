@@ -1,0 +1,52 @@
+
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Professional Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Mapbox GL JS CSS -->
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+  <style>
+    body { margin: 0; padding: 0; }
+    #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <!-- Mapbox GL JS -->
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+  <script>
+    mapboxgl.accessToken = 'pk.eyJ1IjoiZGl2eWFuc2hiYW5zYWwxMCIsImEiOiJjbTZ0ZnN3NWswMjgzMmlzYzh3YjdtOTYyIn0.RWLfD3wChzRnlU95Sfhw9g';
+
+    const map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/mapbox/streets-v11',
+      center: [-74.006, 40.7128],
+      zoom: 12
+    });
+
+    // Fetch markers from the server and add them to the map
+    fetch('/api/markers')
+      .then(response => response.json())
+      .then(data => {
+        data.forEach(marker => {
+          const el = document.createElement('div');
+          el.className = 'marker';
+          el.style.backgroundImage = 'url(https://docs.mapbox.com/help/demos/custom-markers-gl-js/mapbox-icon.png)';
+          el.style.width = '30px';
+          el.style.height = '30px';
+          el.style.backgroundSize = '100%';
+
+          new mapboxgl.Marker(el)
+            .setLngLat([marker.lng, marker.lat])
+            .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(`<h3>${marker.name}</h3>`))
+            .addTo(map);
+        });
+      })
+      .catch(err => console.error('Error fetching markers:', err));
+  </script>
+</body>
+</html>

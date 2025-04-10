@@ -1,0 +1,152 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Map with Building Icons</title>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+  <style>
+    body { margin: 0; padding: 0; }
+    #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+  <script>
+    mapboxgl.accessToken = 'pk.eyJ1IjoiZGl2eWFuc2hiYW5zYWwxMCIsImEiOiJjbTZ0ZnN3NWswMjgzMmlzYzh3YjdtOTYyIn0.RWLfD3wChzRnlU95Sfhw9g';
+
+    // Function to load markers from the database
+    function loadMarkers() {
+      fetch('/api/markers')
+        .then(response => response.json())
+        .then(data => {
+          // Add each marker to the map using the building icon
+          data.forEach(marker => {
+            const el = document.createElement('div');
+            el.className = 'marker';
+
+            // Use Mapbox's building icon as the marker
+            el.style.backgroundImage = 'url(https://docs.mapbox.com/mapbox-gl-js/assets/marker-building.png)';
+            el.style.width = '30px';
+            el.style.height = '30px';
+            el.style.backgroundSize = '100%';
+
+            // Create a new marker with the building icon
+            new mapboxgl.Marker(el)
+              .setLngLat([marker.lng, marker.lat])
+              .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(`<h3>${marker.name}</h3>`))
+              .addTo(map);
+          });
+        })
+        .catch(err => console.error('Error fetching markers:', err));
+    }
+
+    // Get the user's current location
+    navigator.geolocation.getCurrentPosition(function(position) {
+      const userLng = position.coords.longitude;
+      const userLat = position.coords.latitude;
+
+      // Initialize the map centered at the user's location
+      const map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/streets-v11',
+        center: [userLng, userLat], // Set map center to user's location
+        zoom: 12
+      });
+
+      // Load markers after the map is initialized
+      map.on('load', function() {
+        loadMarkers();
+      });
+
+    }, function(error) {
+      console.error("Geolocation error:", error);
+      alert("Could not fetch your location. Please ensure location services are enabled.");
+      // Default to New York if geolocation fails
+      const defaultLngLat = [-74.006, 40.7128]; 
+      const map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/streets-v11',
+        center: defaultLngLat,
+        zoom: 12
+      });
+      
+      // Load markers after the map is initialized
+      map.on('load', function() {
+        loadMarkers();
+      });
+    });
+  </script>
+</body>
+</html>-->
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Map with Saved Markers</title>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+  <style>
+    body { margin: 0; padding: 0; }
+    #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+  <script>
+    mapboxgl.accessToken = 'pk.eyJ1IjoiZGl2eWFuc2hiYW5zYWwxMCIsImEiOiJjbTZ0ZnN3NWswMjgzMmlzYzh3YjdtOTYyIn0.RWLfD3wChzRnlU95Sfhw9g';
+
+    let map;
+
+    function loadMarkers() {
+      fetch('/api/markers') // Fetch all saved markers
+        .then(response => response.json())
+        .then(data => {
+          data.forEach(marker => {
+            new mapboxgl.Marker({ color: 'green' }) // Green color for stored markers
+              .setLngLat([marker.lng, marker.lat])
+              .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(`<h3>${marker.name}</h3>`))
+              .addTo(map);
+          });
+        })
+        .catch(err => console.error('Error fetching markers:', err));
+    }
+
+    // Get user location
+    navigator.geolocation.getCurrentPosition(function(position) {
+      const userLng = position.coords.longitude;
+      const userLat = position.coords.latitude;
+
+      map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/streets-v11',
+        center: [userLng, userLat],
+        zoom: 12
+      });
+
+      map.on('load', loadMarkers); // Load saved markers on map load
+
+    }, function(error) {
+      console.error("Geolocation error:", error);
+      alert("Could not fetch your location. Using default location.");
+      
+      const defaultLngLat = [-74.006, 40.7128]; // Default to New York
+      map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/streets-v11',
+        center: defaultLngLat,
+        zoom: 12
+      });
+
+      map.on('load', loadMarkers); // Load saved markers on map load
+    });
+  </script>
+</body>
+</html>
