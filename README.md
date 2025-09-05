@@ -90,7 +90,7 @@ MAPBOX_ACCESS_TOKEN=your_mapbox_access_token
 
 ## 📦 Tech Stack
 
-* **Frontend:** React, Vite
+* **Frontend:** React, Vite, HTML a lot of HTML due to Mapbox being rendered in it and the JS in script tags.
 * **Backend:** Node.js, Express
 * **Database:** MongoDB
 * **Maps & Location:** Mapbox
